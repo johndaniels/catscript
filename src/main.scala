@@ -1,4 +1,4 @@
-import clopher.interpret.Interpretor
+import catscript.interpret.Interpretor
 
 object main {
   def main(args: Array[String]) {

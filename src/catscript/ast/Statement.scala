@@ -1,4 +1,4 @@
-package clopher.ast
+package catscript.ast
 
 trait Statement extends Token {
 

@@ -1,6 +1,6 @@
-package clopher.ast
+package catscript.ast
 
-import clopher.ast.Token
+import catscript.ast.Token
 
 class Operator(op: String) extends Token {
   val operator = op;

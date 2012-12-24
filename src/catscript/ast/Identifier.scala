@@ -1,6 +1,6 @@
-package clopher.ast
+package catscript.ast
 
-import clopher.ast.Token
+import catscript.ast.Token
 
 class Identifier(text: String) extends Expression {
   val name = text;

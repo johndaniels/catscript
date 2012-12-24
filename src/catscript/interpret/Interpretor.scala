@@ -1,13 +1,13 @@
-package clopher.interpret
+package catscript.interpret
 
 import scala.collection.mutable.HashMap
-import clopher.ast.Statement
-import clopher.ast.AssignmentStatement
-import clopher.ast.Expression
-import clopher.ast.Identifier
-import clopher.ast.NumberLiteral
-import clopher.ast.BinaryExpression
-import clopher.ast.ExpressionStatement
+import catscript.ast.Statement
+import catscript.ast.AssignmentStatement
+import catscript.ast.Expression
+import catscript.ast.Identifier
+import catscript.ast.NumberLiteral
+import catscript.ast.BinaryExpression
+import catscript.ast.ExpressionStatement
 
 class Interpretor {
   val variables = new HashMap[String,Double]

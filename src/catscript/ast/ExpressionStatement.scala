@@ -1,4 +1,4 @@
-package clopher.ast
+package catscript.ast
 
 class ExpressionStatement(expr:Expression) extends Statement {
   val expression = expr

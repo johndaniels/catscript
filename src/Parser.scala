@@ -1,13 +1,13 @@
 import scala.util.parsing.combinator.RegexParsers
-import clopher.ast.Identifier
-import clopher.ast.Operator
-import clopher.ast.Expression
-import clopher.ast.BinaryExpression
-import clopher.ast.IdentifierExpression
-import clopher.ast.Assignment
-import clopher.ast.AssignmentStatement
-import clopher.ast.ExpressionStatement
-import clopher.ast.NumberLiteral
+import catscript.ast.Identifier
+import catscript.ast.Operator
+import catscript.ast.Expression
+import catscript.ast.BinaryExpression
+import catscript.ast.IdentifierExpression
+import catscript.ast.Assignment
+import catscript.ast.AssignmentStatement
+import catscript.ast.ExpressionStatement
+import catscript.ast.NumberLiteral
 
 object Parser extends RegexParsers {
   val ID = """[a-zA-Z]([a-zA-Z0-9]|_)*""".r ^^ { new Identifier(_)}
