@@ -8,8 +8,14 @@ import catscript.ast.Assignment
 import catscript.ast.AssignmentStatement
 import catscript.ast.ExpressionStatement
 import catscript.ast.NumberLiteral
+import scala.util.parsing.combinator.PackratParsers
+import catscript.ast.ParameterList
+import catscript.ast.Statement
+import catscript.ast.Func
+import catscript.ast.Block
+import catscript.ast.Invocation
 
-object Parser extends RegexParsers {
+object Parser extends RegexParsers with PackratParsers {
   val ID = """[a-zA-Z]([a-zA-Z0-9]|_)*""".r ^^ { new Identifier(_)}
   val PLUS = "+" ^^ { new Operator(_) }
   val MINUS = "-" ^^ { new Operator(_) }
@@ -17,41 +23,99 @@ object Parser extends RegexParsers {
   val MULTIPLY = "*" ^^ { new Operator(_) }
   val ASSIGN = "=" ^^ ((_) => new Assignment)
   val NUMBER = """([0-9]*\.[0-9]+)|([0-9]+\.?)""".r ^^ { new NumberLiteral(_);}
-      
-  val TERM = (ID | NUMBER | ("(" ~> EXPR <~ ")"))
+  val SEMICOLON = ";"
+  val COMMA = ","
   
-  private def getBinopParser(binop:Parser[Operator], expr:Parser[Expression]) = {
-    (((expr ~ binop)*) ~ expr)
-  } ^^ {
+  val LPAREN = "("
+  val RPAREN = ")"
+  val LCURLY = "{"
+  val RCURLY = "}"
+  val FAT_ARROW = "=>"
+ 
+  val ARGUMENTS = (EXPRESSION ~ ((COMMA ~> EXPRESSION)*)).? ^^ {
     _ match {
-      case ~(list, expr:Expression) => {
-        if (!list.isEmpty) {
-          var result:Expression = list.head._1;
-          var lastOperator = list.head._2;
-          val remaining = list.drop(1)
-        
-          for(item <- remaining) {
-            result = new BinaryExpression(result, lastOperator, item._1)
-            lastOperator = item._2;
-          }
-          new BinaryExpression(result, lastOperator, expr)
-        } else {
-          expr
-        }
+      case Some(~(expr:Expression, exprList:List[Expression])) => {
+        expr :: exprList
+      }
+      case None => {
+        List()
+      }
+    }
+  }
+    
+  val INVOCATION = (ID ~ (LPAREN ~> ARGUMENTS <~ RPAREN)) ^^ {
+    _ match {
+      case ~(id:Identifier, arguments:List[Expression]) => {
+        Invocation(id, arguments)
       }
     }
   }
   
-  val PROD:Parser[Expression] = getBinopParser((MULTIPLY|DIVIDE), TERM)
+  lazy val TERM:PackratParser[Expression] = (FUNCTION | INVOCATION | ID | NUMBER | ("(" ~> EXPRESSION <~ ")"))
   
-  val EXPR:Parser[Expression] = getBinopParser((MINUS|PLUS), PROD) 
-
-  val STATEMENT = ((ID ~ ASSIGN ~ EXPR) | EXPR) ^^ {
+  private def getBinopParser(binop:Parser[Operator], expr:Parser[Expression], desc:Parser[Expression]) = {
+    ((expr ~ binop ~ desc) | desc) 
+  } ^^ {
+    _ match {
+      case ~(~(a:Expression,b:Operator),c:Expression) => {
+        new BinaryExpression(a, b, c)
+      }
+      case b:Expression => {
+        b
+      }
+    }
+  }
+  
+  lazy val PROD:PackratParser[Expression] = getBinopParser((MULTIPLY|DIVIDE), PROD, TERM)
+  
+  lazy val SUM:PackratParser[Expression] = getBinopParser((PLUS|MINUS), SUM, PROD)
+  
+  val PARAMS_LIST:PackratParser[ParameterList] = (ID ~ ((COMMA ~> ID)*)) ^^ {
+    _ match {
+      case ~(id:Identifier, idList:List[Identifier]) => {
+        ParameterList(id :: idList)
+      }
+    }
+  }
+  
+  val PARAMS:PackratParser[ParameterList] = ((LPAREN ~> PARAMS_LIST.? <~ RPAREN) | PARAMS_LIST) ^^ {
+    _ match {
+      case Some(args:ParameterList) => {
+        args
+      }
+      case None => {
+        ParameterList(List())
+      }
+      case args:ParameterList => {
+        args
+      }
+    }
+  }
+  
+  val BLOCK:PackratParser[Block] = (LCURLY ~> (STATEMENT*) <~ RCURLY) ^^ {
+    _ match {
+      case list:List[Statement] => {
+        Block(list)
+      }
+    }
+  }
+  
+  lazy val FUNCTION = ((PARAMS <~ FAT_ARROW) ~ (BLOCK | EXPRESSION)) ^^ {
+    _ match {
+      case ~(arguments:ParameterList, expression:Expression) => {
+    	Func(arguments, expression)  
+      }
+    }
+  }
+  
+  lazy val EXPRESSION:PackratParser[Expression] = SUM
+  
+  val STATEMENT = BLOCK | (((ID ~ ASSIGN ~ EXPRESSION) <~ SEMICOLON) | (INVOCATION <~ SEMICOLON)) ^^ {
     _ match {
       case ~(~(x:Identifier,y:Assignment), z:Expression) => new AssignmentStatement(x,z)
       case x:Expression => new ExpressionStatement(x)
     }
-  } 
+  }
   
   def apply(s: String) = {
     this.parseAll(STATEMENT, s)

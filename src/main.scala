@@ -8,7 +8,7 @@ object main {
 	  val result = Parser.apply(line);
 	  result match {
 	    case Parser.Success(result, value) => interpretor.run(result)
-	    case Parser.Failure(_, _) =>{ println("ERROR") }
+	    case Parser.Failure(msg, _) =>{ println("ERROR: " + msg) }
 	  }
 	}
   }
