@@ -7,39 +7,82 @@ import catscript.ast.Expression
 import catscript.ast.Identifier
 import catscript.ast.NumberLiteral
 import catscript.ast.BinaryExpression
+import catscript.ast.Invocation
+import catscript.ast.Block
+import catscript.ast.Operator
+import catscript.ast.Func
 import catscript.ast.ExpressionStatement
 
 class Interpretor {
-  val variables = new HashMap[String,Double]
+  private trait CatObject {
+    
+  }
+  private implicit def toCatDouble(old: Double) = new CatDouble(old)
+  private case class CatDouble(value: Double) extends CatObject {}
+  private case class CatFunc(function: Func) extends CatObject {
+    def call(arguments: List[Expression]):CatObject = {
+      function.expression match {
+        case expression => evaluate(expression)
+      }
+    }
+  }
+  private case class CatNone() extends CatObject {}
   
-  def evaluate(expr:Expression): Double = {
+  private val variables = new HashMap[String,CatObject]
+  
+  
+  private def evaluate(expr:Expression): CatObject = {
     expr match {
-      case expr:Identifier => {
-        variables.get(expr.name).get
+      case Identifier(name) => {
+        variables.get(name).get
       }
-      case expr:NumberLiteral => {
-        expr.number
+      case NumberLiteral(number) => {
+        number
       }
-      case expr:BinaryExpression => {
-        var left = evaluate(expr.left)
-        var right = evaluate(expr.right)
-        expr.operator.operator match {
-          case "+" => left + right
-          case "-" => left - right
-          case "/" => left / right
-          case "*" => left * right
+      case BinaryExpression(leftExpr, Operator(operator), rightExpr) => {
+        var left = evaluate(leftExpr)
+        var right = evaluate(rightExpr)
+        (left, right) match {
+          case (CatDouble(leftValue), CatDouble(rightValue)) => {
+            operator match {
+	          case "-" => leftValue - rightValue
+	          case "+" => leftValue + rightValue
+	          case "/" => leftValue / rightValue
+	          case "*" => leftValue * rightValue
+            }
+          }
         }
+      }
+      case function: Func => {
+        CatFunc(function)
+      }
+      case Invocation(Identifier(name), arguments) => {
+        val maybeValue = variables.get(name)
+        maybeValue match {
+          case Some(function: CatFunc) => {
+            function.call(arguments)
+          }
+        }
+      }
+      case Block(statements) => {
+        var lastValue: CatObject = CatNone()
+        for (statement <- statements) {
+          lastValue = statement match {
+            case ExpressionStatement(expression) => evaluate(expression)
+          }
+        }
+        return lastValue
       }
     }
   }
   
-  def run(statement:Statement) = {
+  def run(statement:Statement): Unit = {
     statement match {
-      case statement:AssignmentStatement => {
-        variables.put(statement.identifier.name, evaluate(statement.expression))
+      case AssignmentStatement(identifier, expression) => {
+        variables.put(identifier.name, evaluate(expression))
       }
-      case statement:ExpressionStatement => {
-        println(evaluate(statement.expression))
+      case ExpressionStatement(invocation) => {
+        println(evaluate(invocation))
       }
     }
   }

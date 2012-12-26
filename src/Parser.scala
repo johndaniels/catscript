@@ -6,7 +6,6 @@ import catscript.ast.BinaryExpression
 import catscript.ast.IdentifierExpression
 import catscript.ast.Assignment
 import catscript.ast.AssignmentStatement
-import catscript.ast.ExpressionStatement
 import catscript.ast.NumberLiteral
 import scala.util.parsing.combinator.PackratParsers
 import catscript.ast.ParameterList
@@ -14,6 +13,7 @@ import catscript.ast.Statement
 import catscript.ast.Func
 import catscript.ast.Block
 import catscript.ast.Invocation
+import catscript.ast.ExpressionStatement
 
 object Parser extends RegexParsers with PackratParsers {
   val ID = """[a-zA-Z]([a-zA-Z0-9]|_)*""".r ^^ { new Identifier(_)}
@@ -110,10 +110,10 @@ object Parser extends RegexParsers with PackratParsers {
   
   lazy val EXPRESSION:PackratParser[Expression] = SUM
   
-  val STATEMENT = BLOCK | (((ID ~ ASSIGN ~ EXPRESSION) <~ SEMICOLON) | (INVOCATION <~ SEMICOLON)) ^^ {
+  val STATEMENT = (((ID ~ ASSIGN ~ EXPRESSION) <~ SEMICOLON) | (EXPRESSION <~ SEMICOLON)) ^^ {
     _ match {
-      case ~(~(x:Identifier,y:Assignment), z:Expression) => new AssignmentStatement(x,z)
-      case x:Expression => new ExpressionStatement(x)
+      case ~(~(x:Identifier,y:Assignment), z:Expression) => AssignmentStatement(x,z)
+      case expression: Expression => ExpressionStatement(expression)
     }
   }
   
